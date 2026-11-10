@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AudioShare Uploader</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="dot"></span> AudioShare Uploader</div>
+  <nav id="nav" hidden>
+    <button data-view="tasks" class="active">Taken</button>
+    <button data-view="log">Logboek</button>
+    <button data-view="settings">Instellingen</button>
+  </nav>
+  <div class="who" id="who"></div>
+</header>
+
+<main>
+  <div id="msg" class="msg" hidden></div>
+
+  <!-- Login / first account -->
+  <section id="v-login" class="card narrow" hidden>
+    <h1 id="loginTitle">Inloggen</h1>
+    <p id="loginHint" class="muted"></p>
+    <form id="loginForm">
+      <label>Gebruikersnaam <input id="lName" autocomplete="username" required></label>
+      <label>Wachtwoord <input id="lPass" type="password" autocomplete="current-password" required></label>
+      <label id="lPass2Row" hidden>Herhaal wachtwoord <input id="lPass2" type="password" autocomplete="new-password"></label>
+      <button class="primary" type="submit" id="loginBtn">Inloggen</button>
+    </form>
+  </section>
+
+  <!-- Tasks -->
+  <section id="v-tasks" hidden>
+    <div id="linkBanner"></div>
+    <div class="bar">
+      <h1>Taken</h1>
+      <button class="primary" id="newTask">Taak toevoegen</button>
+    </div>
+    <div id="taskList"></div>
+  </section>
+
+  <!-- Log -->
+  <section id="v-log" hidden>
+    <div class="bar"><h1>Logboek</h1><button id="reloadLog">Vernieuwen</button></div>
+    <div class="card"><table class="log"><tbody id="logBody"></tbody></table></div>
+  </section>
+
+  <!-- Settings -->
+  <section id="v-settings" hidden>
+    <h1>Instellingen</h1>
+    <div class="card">
+      <h2>Koppeling met AudioShare</h2>
+      <div id="linkInfo"></div>
+      <form id="linkForm" class="grid">
+        <label>Adres van AudioShare <input id="kUrl" placeholder="https://platform.br6.nl"></label>
+        <label>Koppelcode <input id="kCode" placeholder="K7QX-M2PL-9RTA"></label>
+        <label>of koppelbestand <input id="kFile" type="file" accept=".audioshare"></label>
+        <label>Naam van deze server <input id="kDevice"></label>
+        <div class="full muted">Gebruik de koppelcode van een <strong>studio</strong> (AudioShare → Recorders → Studio's). Daar bepaal je ook welke programma's deze server mag aanleveren.</div>
+        <div class="full"><button class="primary" type="submit">Koppelen</button></div>
+      </form>
+      <div class="row" id="linkActions" hidden>
+        <button id="testBtn">Verbinding testen</button>
+        <button id="unlinkBtn" class="danger">Koppeling verwijderen</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Webinterface</h2>
+      <form id="webForm" class="grid">
+        <label>Poort <input id="sPort" type="number" min="1024" max="65535"></label>
+        <label class="check full"><input id="sRemote" type="checkbox"> Ook bereikbaar van buiten het lokale netwerk (alleen via VPN of beveiligde proxy)</label>
+        <div class="full"><button type="submit">Opslaan</button></div>
+      </form>
+    </div>
+    <div class="card">
+      <h2>Accounts</h2>
+      <div id="accounts"></div>
+      <form id="pwForm" class="grid">
+        <h3 class="full">Mijn wachtwoord wijzigen</h3>
+        <label>Huidig wachtwoord <input id="pOld" type="password" autocomplete="current-password"></label>
+        <label>Nieuw wachtwoord (min. 10 tekens) <input id="pNew" type="password" autocomplete="new-password"></label>
+        <div class="full"><button type="submit">Wijzigen</button></div>
+      </form>
+      <form id="accForm" class="grid">
+        <h3 class="full">Account toevoegen</h3>
+        <label>Gebruikersnaam <input id="aName"></label>
+        <label>Wachtwoord (min. 10 tekens) <input id="aPass" type="password" autocomplete="new-password"></label>
+        <div class="full"><button type="submit">Toevoegen</button></div>
+      </form>
+    </div>
+    <p class="muted" id="version"></p>
+  </section>
+</main>
+
+<!-- Task dialog -->
+<dialog id="taskDlg">
+  <form id="taskForm" method="dialog">
+    <h2 id="taskDlgTitle">Taak</h2>
+    <div class="grid">
+      <label class="full">Naam <input id="tName" placeholder="bijv. De Blik uur 1 automatisch" required></label>
+      <label>Programma <select id="tProgram"></select></label>
+      <label class="check"><input id="tEnabled" type="checkbox" checked> Taak staat aan</label>
+
+      <fieldset class="full">
+        <legend>Bron</legend>
+        <div class="seg"><label><input type="radio" name="tKind" value="file" checked> Bestand</label><label><input type="radio" name="tKind" value="folder"> Map (nieuwste audiobestand)</label></div>
+        <input id="tSource" placeholder="bijv. D:\Opnames\DeBlik\blik.mp3 of \\nas\audio\blik">
+      </fieldset>
+
+      <fieldset class="full">
+        <legend>Moment</legend>
+        <div class="seg"><label><input type="radio" name="tTrigger" value="watch" checked> Bewaken: uploaden zodra het bestand nieuw of veranderd is</label><label><input type="radio" name="tTrigger" value="schedule"> Vaste tijd</label></div>
+        <div id="schedRow" class="row" hidden>
+          <div class="days" id="tDays"></div>
+          <label class="inline">om <input id="tTime" type="time" value="16:00"></label>
+        </div>
+        <label class="inline">Bestand moet <input id="tSettle" type="number" min="10" max="3600" value="60" class="small"> seconden ongewijzigd zijn voordat het wordt geüpload</label>
+      </fieldset>
+
+      <fieldset class="full">
+        <legend>Uitzenddatum</legend>
+        <select id="tDateRule">
+          <option value="today">Vandaag</option>
+          <option value="tomorrow">Morgen</option>
+          <option value="next_air_day">Eerstvolgende uitzenddag</option>
+          <option value="from_name">Uit de bestandsnaam (2026-11-14, 20261114 of 14-11-2026)</option>
+        </select>
+        <div id="airRow" hidden><span class="muted">Uitzenddagen:</span> <div class="days" id="tAirDays"></div></div>
+      </fieldset>
+
+      <label class="full">Titel <input id="tTitle" value="{programma} {datum}"><span class="muted">Velden: {programma} {datum} {dag} {bestand}</span></label>
+      <label class="full">Omschrijving (optioneel) <textarea id="tDesc" rows="2"></textarea></label>
+    </div>
+    <div id="preview" class="preview"></div>
+    <div class="row end">
+      <button type="button" id="tDelete" class="danger" hidden>Verwijderen</button>
+      <span class="grow"></span>
+      <button type="button" id="tCancel">Annuleren</button>
+      <button type="button" id="tSave" class="primary">Opslaan</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+[package]
+name = "audioshare-uploader"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.91"
+build = "build.rs"
+
+[[bin]]
+name = "AudioShareUploader"
+path = "src/main.rs"
+
+[dependencies]
+chrono = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ureq = { version = "3", default-features = false, features = ["json", "native-tls"] }
+native-tls = "0.2"
+sha2 = "0.10"
+hex = "0.4"
+uuid = { version = "1", features = ["v4"] }
+argon2 = "0.5"
+aes-gcm = "0.10"
+getrandom = "0.2"
+base64 = "0.22"
+mp3lame-encoder = "0.2"
+flacenc = "0.5"
+symphonia = { version = "0.5", default-features = false, features = ["mp3", "flac", "ogg", "vorbis", "wav", "pcm"] }
+tiny_http = "0.12"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Security_Credentials", "Win32_Foundation"] }
+windows-service = "0.8"
+
+[dev-dependencies]
+claxon = "0.4"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 4
+
+[profile.dev.package."*"]
+opt-level = 2
