@@ -217,6 +217,20 @@ function renderSettings() {
     if (!confirm(`Account ${b.dataset.delacc} verwijderen?`)) return;
     try { await api('accounts/' + encodeURIComponent(b.dataset.delacc), 'DELETE'); refresh(); } catch (e) { msg(e.message, false); }
   }));
+  $('#shareList').innerHTML = (data.shares || []).map(x => `<div class="acc"><span><strong>${esc(x.letter || '—')}</strong> ${esc(x.unc)} <span class="muted">als ${esc(x.user || '(service-account)')}</span></span>
+    <span><button class="small" data-shtest="${esc(x.unc)}">Testen</button> <button class="small" data-shedit="${esc(x.unc)}">Wijzigen</button> <button class="small danger" data-shdel="${esc(x.unc)}">Verwijderen</button></span></div>`).join('');
+  document.querySelectorAll('[data-shtest]').forEach(b => (b.onclick = async () => {
+    try { msg((await api('shares/test', 'POST', { unc: b.dataset.shtest })).message); } catch (e) { msg(e.message, false); }
+  }));
+  document.querySelectorAll('[data-shedit]').forEach(b => (b.onclick = () => {
+    const x = data.shares.find(s => s.unc === b.dataset.shedit);
+    $('#shLetter').value = (x.letter || '').replace(':', ''); $('#shUnc').value = x.unc; $('#shUser').value = x.user; $('#shPass').value = '';
+    $('#shPass').focus();
+  }));
+  document.querySelectorAll('[data-shdel]').forEach(b => (b.onclick = async () => {
+    if (!confirm(`Netwerkmap ${b.dataset.shdel} verwijderen?`)) return;
+    try { await api('shares/delete', 'POST', { unc: b.dataset.shdel }); refresh(); } catch (e) { msg(e.message, false); }
+  }));
   $('#version').textContent = `AudioShare Uploader ${data.version}`;
 }
 
@@ -232,6 +246,14 @@ $('#testBtn').onclick = async () => { try { msg((await api('test', 'POST')).mess
 $('#unlinkBtn').onclick = async () => {
   if (!confirm('Koppeling met AudioShare verwijderen? Trek de sleutel ook in bij AudioShare → Recorders → Studio\'s.')) return;
   await api('unlink', 'POST'); refresh();
+};
+$('#shareForm').onsubmit = async e => {
+  e.preventDefault();
+  try {
+    const r = await api('shares', 'POST', { letter: $('#shLetter').value, unc: $('#shUnc').value, user: $('#shUser').value, password: $('#shPass').value });
+    msg(r.message, r.ok); if (r.ok) { $('#shLetter').value = $('#shUnc').value = $('#shUser').value = $('#shPass').value = ''; }
+    refresh();
+  } catch (err) { msg(err.message, false); }
 };
 $('#webForm').onsubmit = async e => {
   e.preventDefault();

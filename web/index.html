@@ -68,6 +68,19 @@
       </div>
     </div>
     <div class="card">
+      <h2>Netwerkmappen (NAS)</h2>
+      <p class="muted">Staan de bestanden op een NAS of andere server? Vul die hier één keer in. De uploader logt dan zelf in, en je kunt in de taken gewoon de schijfletter gebruiken die je kent (bijv. <code>Y:\muziek\...</code>).</p>
+      <div id="shareList"></div>
+      <form id="shareForm" class="grid">
+        <label>Schijfletter (optioneel) <input id="shLetter" placeholder="Y" maxlength="2"></label>
+        <label>Netwerkpad <input id="shUnc" placeholder="\\NASBR6\Mediafiles_Playout"></label>
+        <label>Gebruikersnaam op de NAS <input id="shUser" autocomplete="off"></label>
+        <label>Wachtwoord <input id="shPass" type="password" autocomplete="new-password" placeholder="leeg = ongewijzigd"></label>
+        <div class="full muted">Het netwerkpad vind je op een pc met die schijf: <code>net use</code> in een opdrachtprompt, of in Verkenner achter de schijfnaam (bijv. "Mediafiles_Playout (\\nasbr6) (Y:)").</div>
+        <div class="full"><button class="primary" type="submit">Opslaan en testen</button></div>
+      </form>
+    </div>
+    <div class="card">
       <h2>Webinterface</h2>
       <form id="webForm" class="grid">
         <label>Poort <input id="sPort" type="number" min="1024" max="65535"></label>

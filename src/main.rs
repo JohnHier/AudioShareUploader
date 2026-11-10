@@ -11,6 +11,7 @@ mod engine;
 mod export;
 mod media;
 mod rules;
+mod shares;
 mod wav;
 mod web;
 

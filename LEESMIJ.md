@@ -1,4 +1,4 @@
-# AudioShare Uploader 0.1.0
+# AudioShare Uploader 0.2.0
 
 Uploadt programma's automatisch naar AudioShare vanaf een server-pc in de studio: op een vaste tijd, of zodra een bestand vernieuwd is. Draait als Windows-service en wordt ingesteld via een webinterface.
 
@@ -42,9 +42,27 @@ De Uploader meldt problemen aan AudioShare (vanaf versie 1.6.0) en AudioShare ma
 - Webinterface: inloggen met gebruikersnaam en wachtwoord (Argon2id), sessie van 12 uur, na 5 foute pogingen 5 minuten wachten. Het eerste account kan alleen op de server zelf worden gemaakt.
 - Standaard alleen bereikbaar vanaf het lokale netwerk. Zet toegang van buiten pas aan als het via een VPN of een beveiligde (HTTPS-)proxy loopt; de webinterface zelf spreekt gewoon HTTP.
 
-## Netwerkmappen
+## Netwerkmappen (NAS)
 
-De service draait als *Lokaal systeem*. Die heeft geen toegang tot netwerkshares van een gebruiker. Gebruik voor een NAS een UNC-pad (`\\nas\share\map`) en geef de computeraccount van de server leesrechten, of laat de service draaien onder een gebruikersaccount (Services → AudioShare Uploader → Aanmelden). Koppel daarna opnieuw met AudioShare: de sleutel hoort bij het Windows-account waaronder de service draait.
+De service draait als *Lokaal systeem*. Die ziet geen netwerkschijven van een gebruiker (zoals `Y:`) en kan niet zelf inloggen op een NAS. Daarom logt de Uploader zelf in:
+
+1. **Instellingen → Netwerkmappen**: vul de schijfletter in (bijv. `Y`), het netwerkpad (bijv. `\\NASBR6\Mediafiles_Playout`) en een gebruikersnaam en wachtwoord van de NAS.
+2. Klik op **Opslaan en testen**. Je ziet meteen of inloggen en lezen lukt.
+3. In de taken kun je daarna gewoon `Y:\muziek\...` gebruiken; de Uploader maakt daar zelf `\\NASBR6\Mediafiles_Playout\muziek\...` van.
+
+Het netwerkpad achter een schijfletter vind je met `net use` in een opdrachtprompt, of in Verkenner achter de schijfnaam. Het wachtwoord staat in Windows Credential Manager (versleuteld door Windows).
+
+## Bijwerken naar een nieuwe versie
+
+In een opdrachtprompt **als administrator**:
+
+```
+sc stop AudioShareUploader
+copy /Y <nieuwe exe> C:\AudioShareUploader\AudioShareUploader.exe
+sc start AudioShareUploader
+```
+
+Taken, koppeling en instellingen blijven bewaard.
 
 ## Beheer
 

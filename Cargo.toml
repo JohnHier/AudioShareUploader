@@ -1,6 +1,6 @@
 [package]
 name = "audioshare-uploader"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.91"
 build = "build.rs"
@@ -28,7 +28,7 @@ symphonia = { version = "0.5", default-features = false, features = ["mp3", "fla
 tiny_http = "0.12"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_Security_Credentials", "Win32_Foundation"] }
+windows-sys = { version = "0.61", features = ["Win32_Security_Credentials", "Win32_Foundation", "Win32_NetworkManagement_WNet"] }
 windows-service = "0.8"
 
 [dev-dependencies]

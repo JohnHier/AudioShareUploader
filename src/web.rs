@@ -410,6 +410,53 @@ impl Web {
                 st.save();
                 json_resp(200, &json!({ "ok": true }))
             }
+            (Method::Post, ["shares"]) => {
+                let unc = crate::shares::normalize_unc(&s("unc"));
+                let letter = crate::shares::normalize_letter(&s("letter"));
+                let user_name = s("user").trim().to_string();
+                if unc.trim_start_matches('\\').split('\\').filter(|x| !x.is_empty()).count() < 2 {
+                    return err(400, "Vul het netwerkpad in als \\\\NAS\\gedeelde-map, bijv. \\\\NASBR6\\Mediafiles_Playout");
+                }
+                let share = crate::config::Share { letter: letter.clone(), unc: unc.clone(), user: user_name.clone() };
+                if !s("password").is_empty() {
+                    if let Err(e) = crate::shares::save_password(&unc, &s("password")) {
+                        return err(500, &e);
+                    }
+                }
+                // Test right away, so a typo shows now and not at 20:00.
+                let test = crate::shares::connect(&share, true).and_then(|_| {
+                    std::fs::read_dir(&unc).map(|d| d.count()).map_err(|e| format!("Ingelogd, maar de map is niet leesbaar: {e}"))
+                });
+                let mut st = self.app.settings.lock().unwrap();
+                st.shares.retain(|x| !x.unc.eq_ignore_ascii_case(&unc) && (letter.is_empty() || x.letter != letter));
+                st.shares.push(share);
+                st.shares.sort_by(|a, b| a.letter.cmp(&b.letter).then(a.unc.cmp(&b.unc)));
+                st.save();
+                drop(st);
+                self.app.log("netwerk", Level::Info, format!("Netwerkmap {}{} ingesteld door {user}", if letter.is_empty() { String::new() } else { format!("{letter} = ") }, unc));
+                match test {
+                    Ok(n) => json_resp(200, &json!({ "ok": true, "message": format!("Opgeslagen. Verbinding met {unc} in orde ({n} items in de map).") })),
+                    Err(e) => json_resp(200, &json!({ "ok": false, "message": format!("Opgeslagen, maar: {e}") })),
+                }
+            }
+            (Method::Post, ["shares", "test"]) => {
+                let unc = crate::shares::normalize_unc(&s("unc"));
+                let share = self.app.settings.lock().unwrap().shares.iter().find(|x| x.unc.eq_ignore_ascii_case(&unc)).cloned();
+                let Some(share) = share else { return err(404, "Netwerkmap niet gevonden") };
+                match crate::shares::connect(&share, true).and_then(|_| std::fs::read_dir(&share.unc).map(|d| d.count()).map_err(|e| format!("Ingelogd, maar de map is niet leesbaar: {e}"))) {
+                    Ok(n) => json_resp(200, &json!({ "ok": true, "message": format!("Verbinding met {} in orde ({n} items).", share.unc) })),
+                    Err(e) => err(400, &e),
+                }
+            }
+            (Method::Post, ["shares", "delete"]) => {
+                let unc = crate::shares::normalize_unc(&s("unc"));
+                let mut st = self.app.settings.lock().unwrap();
+                st.shares.retain(|x| !x.unc.eq_ignore_ascii_case(&unc));
+                st.save();
+                drop(st);
+                crate::shares::forget(&unc);
+                json_resp(200, &json!({ "ok": true }))
+            }
             (Method::Post, ["settings"]) => {
                 let mut st = self.app.settings.lock().unwrap();
                 if let Some(p) = input.get("port").and_then(Value::as_u64) {
@@ -543,6 +590,7 @@ impl Web {
             "programs": st.programs.iter().map(|p| json!({ "id": p.id, "name": p.name })).collect::<Vec<_>>(),
             "tasks": tasks,
             "settings": { "port": st.port, "allow_remote": st.allow_remote, "accounts": st.accounts.iter().map(|a| a.name.clone()).collect::<Vec<_>>() },
+            "shares": st.shares.iter().map(|x| json!({ "letter": x.letter, "unc": x.unc, "user": x.user })).collect::<Vec<_>>(),
             "computer": computer_name(),
             "version": env!("CARGO_PKG_VERSION"),
         })

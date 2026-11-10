@@ -14,10 +14,11 @@ pub fn is_audio(p: &Path) -> bool {
 /// The file a task would upload now: the file itself, or the newest audio
 /// file in the folder (by modification time; partial downloads are skipped).
 pub fn resolve_source(task: &Task) -> Result<PathBuf, String> {
-    let p = PathBuf::from(task.source.trim());
     if task.source.trim().is_empty() {
         return Err("Geen bron ingesteld".into());
     }
+    // Y:\ → \\NAS\share, and log on to the share when needed
+    let p = crate::shares::prepare(&task.source)?;
     match task.source_kind {
         SourceKind::File => {
             if p.is_file() {

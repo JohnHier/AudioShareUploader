@@ -47,6 +47,17 @@ pub struct Account {
     pub hash: String,
 }
 
+/// A network folder the uploader logs on to itself (password in Credential Manager).
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Share {
+    /// Drive letter people use for it, e.g. "Y:" (optional).
+    pub letter: String,
+    /// \\server\share
+    pub unc: String,
+    pub user: String,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
@@ -63,6 +74,8 @@ pub struct Settings {
     pub needs_relink: bool,
     /// The studio's programmes (with norms), refreshed regularly.
     pub programs: Vec<Program>,
+    /// Network folders with their own logon.
+    pub shares: Vec<Share>,
 }
 
 impl Default for Settings {
@@ -77,6 +90,7 @@ impl Default for Settings {
             linked_at: String::new(),
             needs_relink: false,
             programs: Vec::new(),
+            shares: Vec::new(),
         }
     }
 }
