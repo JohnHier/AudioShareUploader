@@ -211,6 +211,11 @@ function renderSettings() {
   if (!$('#kDevice').value) $('#kDevice').value = data.computer;
   if (!$('#kUrl').value && l.url) $('#kUrl').value = l.url;
   $('#sPort').value = data.settings.port; $('#sRemote').checked = data.settings.allow_remote;
+  $('#sAuto').checked = data.settings.autostart;
+  $('#autoRow').hidden = $('#quitBtn').hidden = data.settings.service;
+  $('#modeInfo').textContent = data.settings.service
+    ? 'Draait als Windows-service.'
+    : 'Draait op de achtergrond onder de ingelogde Windows-gebruiker. Opnieuw starten: dubbelklik op AudioShareUploader.exe.';
   $('#accounts').innerHTML = data.settings.accounts.map(a => `<div class="acc"><span>${esc(a)}${a === state.user ? ' <span class="muted">(jij)</span>' : ''}</span>
     ${a === state.user ? '' : `<button class="small danger" data-delacc="${esc(a)}">Verwijderen</button>`}</div>`).join('');
   document.querySelectorAll('[data-delacc]').forEach(b => (b.onclick = async () => {
@@ -257,8 +262,13 @@ $('#shareForm').onsubmit = async e => {
 };
 $('#webForm').onsubmit = async e => {
   e.preventDefault();
-  try { msg((await api('settings', 'POST', { port: +$('#sPort').value, allow_remote: $('#sRemote').checked })).message); refresh(); }
+  try { msg((await api('settings', 'POST', { port: +$('#sPort').value, allow_remote: $('#sRemote').checked, autostart: $('#sAuto').checked })).message); refresh(); }
   catch (err) { msg(err.message, false); }
+};
+$('#quitBtn').onclick = async () => {
+  if (!confirm('Uploader afsluiten? Er wordt dan niets meer geüpload tot je hem opnieuw start (dubbelklik op AudioShareUploader.exe) of Windows opnieuw opstart.')) return;
+  try { await api('shutdown', 'POST'); document.body.innerHTML = '<main><div class="card narrow"><h1>Afgesloten</h1><p>De AudioShare Uploader is gestopt. Opnieuw starten: dubbelklik op AudioShareUploader.exe.</p></div></main>'; }
+  catch (e) { msg(e.message, false); }
 };
 $('#pwForm').onsubmit = async e => {
   e.preventDefault();

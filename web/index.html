@@ -69,7 +69,7 @@
     </div>
     <div class="card">
       <h2>Netwerkmappen (NAS)</h2>
-      <p class="muted">Staan de bestanden op een NAS of andere server? Vul die hier één keer in. De uploader logt dan zelf in, en je kunt in de taken gewoon de schijfletter gebruiken die je kent (bijv. <code>Y:\muziek\...</code>).</p>
+      <p class="muted">Meestal niet nodig: de uploader ziet dezelfde schijven als de ingelogde Windows-gebruiker (zoals <code>Y:</code>). Alleen invullen als hij een netwerkmap niet kan lezen, of als hij als service draait. Hij logt dan zelf in op die map.</p>
       <div id="shareList"></div>
       <form id="shareForm" class="grid">
         <label>Schijfletter (optioneel) <input id="shLetter" placeholder="Y" maxlength="2"></label>
@@ -85,8 +85,10 @@
       <form id="webForm" class="grid">
         <label>Poort <input id="sPort" type="number" min="1024" max="65535"></label>
         <label class="check full"><input id="sRemote" type="checkbox"> Ook bereikbaar van buiten het lokale netwerk (alleen via VPN of beveiligde proxy)</label>
-        <div class="full"><button type="submit">Opslaan</button></div>
+        <label class="check full" id="autoRow"><input id="sAuto" type="checkbox"> Automatisch starten als deze Windows-gebruiker inlogt</label>
+        <div class="full row"><button type="submit">Opslaan</button><span class="grow"></span><button type="button" id="quitBtn" class="danger">Uploader afsluiten</button></div>
       </form>
+      <p class="muted" id="modeInfo"></p>
     </div>
     <div class="card">
       <h2>Accounts</h2>

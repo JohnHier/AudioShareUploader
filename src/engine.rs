@@ -10,6 +10,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+/// Running as a Windows service (instead of under the signed-in user).
+pub static AS_SERVICE: AtomicBool = AtomicBool::new(false);
+
 /// The single AudioShare link of this uploader (key in Credential Manager / queue).
 pub const PROFILE: &str = "studio";
 
@@ -27,11 +30,18 @@ pub struct App {
 
 impl App {
     pub fn start() -> Arc<App> {
-        let settings = Settings::load();
+        let mut settings = Settings::load();
         let queue = Queue::start();
         if settings.linked() {
-            if let Some(tok) = secure::load_token(PROFILE) {
-                queue.tokens.lock().unwrap().insert(PROFILE.into(), (settings.url.clone(), tok));
+            match secure::load_token(PROFILE) {
+                Some(tok) => {
+                    queue.tokens.lock().unwrap().insert(PROFILE.into(), (settings.url.clone(), tok));
+                }
+                // E.g. linked as a service before: that key belongs to another Windows account.
+                None => {
+                    settings.needs_relink = true;
+                    settings.save();
+                }
             }
         }
         let app = Arc::new(App {
@@ -43,9 +53,29 @@ impl App {
             stop: AtomicBool::new(false),
             last_programs_refresh: Mutex::new(0),
         });
+        app.auto_link();
         let a = app.clone();
         std::thread::Builder::new().name("engine".into()).spawn(move || a.run()).expect("engine thread");
         app
+    }
+
+    /// The zip from AudioShare (Recorders → Studio's → Uploader downloaden) holds
+    /// the studio's .audioshare file next to the exe: link with it by itself.
+    fn auto_link(&self) {
+        if self.settings.lock().unwrap().linked() {
+            return;
+        }
+        let Some(f) = crate::audioshare::api::link_files_next_to_exe().into_iter().next() else { return };
+        match crate::audioshare::api::read_link_file(&f) {
+            Ok(l) => match self.link(&l.url, &l.claim_code, &crate::web::computer_name()) {
+                Ok(m) => {
+                    crate::audioshare::api::retire_link_file(&f);
+                    self.log("koppeling", Level::Ok, format!("Automatisch gekoppeld met {}: {m}", f.display()));
+                }
+                Err(e) => self.log("koppeling", Level::Error, format!("Koppelen met {} mislukt: {e}", f.display())),
+            },
+            Err(e) => self.log("koppeling", Level::Error, format!("{}: {e}", f.display())),
+        }
     }
 
     pub fn log(&self, who: &str, level: Level, text: impl Into<String>) {

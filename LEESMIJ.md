@@ -1,18 +1,21 @@
-# AudioShare Uploader 0.2.0
+# AudioShare Uploader 0.3.0
 
-Uploadt programma's automatisch naar AudioShare vanaf een server-pc in de studio: op een vaste tijd, of zodra een bestand vernieuwd is. Draait als Windows-service en wordt ingesteld via een webinterface.
+Uploadt programma's automatisch naar AudioShare vanaf een server-pc in de studio: op een vaste tijd, of zodra een bestand vernieuwd is. Draait op de achtergrond onder de ingelogde Windows-gebruiker (zoals FileZilla of RoboTask) en wordt ingesteld via een webinterface.
 
-## Installeren
+## Installeren (per studio)
 
-1. In AudioShare (admin): **Recorders → Studio's → Studio aanmaken**, bijv. "Server Studio 2". Vink de programma's aan die deze server mag aanleveren en klik op **Alleen koppelcode**.
-2. Kopieer `AudioShareUploader.exe` naar de server-pc, bijv. `C:\AudioShareUploader\`.
-3. Open een opdrachtprompt **als administrator** in die map en voer uit: `AudioShareUploader.exe install`.
-4. Open op de server-pc zelf `http://localhost:8470` en maak het beheeraccount aan (wachtwoord minimaal 10 tekens).
-5. **Instellingen → Koppeling met AudioShare**: vul het adres en de koppelcode in (of kies het `.audioshare`-bestand) en klik op Koppelen.
-6. **Taken → Taak toevoegen**.
+1. In AudioShare (admin): **Recorders → Studio's**. Maak een studio aan (bijv. "Server Studio 2"), vink de programma's aan en klik op **Uploader downloaden**.
+2. Pak de zip uit op de server-pc in een vaste map, bijv. `C:\AudioShareUploader\`.
+3. Log in op Windows met de gebruiker die bij de audiobestanden kan (dezelfde schijven, zoals `Y:`).
+4. **Dubbelklik** op `AudioShareUploader.exe`. De browser opent `http://localhost:8470`.
+5. Kies een gebruikersnaam en wachtwoord (minimaal 10 tekens). De uploader heeft zichzelf al gekoppeld met de studio.
+6. **Taken → Taak toevoegen.**
 
-Daarna is de webinterface bereikbaar vanaf andere pc's in het netwerk op `http://<naam-of-ip-van-server>:8470`.
-Sta in de Windows Firewall poort 8470 (TCP) toe voor het lokale netwerk.
+Geen beheerrechten nodig. Voortaan start de uploader vanzelf als deze Windows-gebruiker inlogt; zorg dat de pc na een herstart automatisch inlogt. Nog een keer dubbelklikken opent alleen de webinterface.
+
+Vanaf andere pc's in het netwerk: `http://<naam-van-de-server>:8470` (sta poort 8470 toe in de Windows Firewall).
+
+**Van een eerdere service-installatie (0.1/0.2)?** Eerst in een opdrachtprompt als administrator: `AudioShareUploader.exe uninstall`. Daarna dubbelklikken. Taken blijven bewaard; koppel opnieuw met een nieuwe code (Instellingen), omdat de sleutel bij het service-account hoorde.
 
 ## Een taak
 
@@ -38,37 +41,28 @@ De Uploader meldt problemen aan AudioShare (vanaf versie 1.6.0) en AudioShare ma
 
 ## Beveiliging
 
-- Koppeling als **studio**: de sleutel geeft alleen toegang tot de programma's van die studio en is in AudioShare met één klik in te trekken. Op de server staat hij in Windows Credential Manager (versleuteld door Windows).
+- Koppeling als **studio**: de sleutel geeft alleen toegang tot de programma's van die studio en is in AudioShare met één klik in te trekken. Op de server staat hij in Windows Credential Manager van de ingelogde gebruiker (versleuteld door Windows). Het koppelbestand in de zip werkt één keer en krijgt daarna de extensie `.gebruikt`.
 - Webinterface: inloggen met gebruikersnaam en wachtwoord (Argon2id), sessie van 12 uur, na 5 foute pogingen 5 minuten wachten. Het eerste account kan alleen op de server zelf worden gemaakt.
 - Standaard alleen bereikbaar vanaf het lokale netwerk. Zet toegang van buiten pas aan als het via een VPN of een beveiligde (HTTPS-)proxy loopt; de webinterface zelf spreekt gewoon HTTP.
 
 ## Netwerkmappen (NAS)
 
-De service draait als *Lokaal systeem*. Die ziet geen netwerkschijven van een gebruiker (zoals `Y:`) en kan niet zelf inloggen op een NAS. Daarom logt de Uploader zelf in:
-
-1. **Instellingen → Netwerkmappen**: vul de schijfletter in (bijv. `Y`), het netwerkpad (bijv. `\\NASBR6\Mediafiles_Playout`) en een gebruikersnaam en wachtwoord van de NAS.
-2. Klik op **Opslaan en testen**. Je ziet meteen of inloggen en lezen lukt.
-3. In de taken kun je daarna gewoon `Y:\muziek\...` gebruiken; de Uploader maakt daar zelf `\\NASBR6\Mediafiles_Playout\muziek\...` van.
-
-Het netwerkpad achter een schijfletter vind je met `net use` in een opdrachtprompt, of in Verkenner achter de schijfnaam. Het wachtwoord staat in Windows Credential Manager (versleuteld door Windows).
+Normaal niet nodig: de uploader ziet dezelfde schijven als de ingelogde gebruiker. Alleen als hij een netwerkmap toch niet kan lezen (of als hij als service draait): **Instellingen → Netwerkmappen**, met schijfletter, netwerkpad (`\\NAS\share`) en een gebruiker en wachtwoord van de NAS.
 
 ## Bijwerken naar een nieuwe versie
 
-In een opdrachtprompt **als administrator**:
-
-```
-sc stop AudioShareUploader
-copy /Y <nieuwe exe> C:\AudioShareUploader\AudioShareUploader.exe
-sc start AudioShareUploader
-```
+1. Webinterface → Instellingen → **Uploader afsluiten**.
+2. Vervang `AudioShareUploader.exe` door de nieuwe versie.
+3. Dubbelklik erop.
 
 Taken, koppeling en instellingen blijven bewaard.
 
 ## Beheer
 
 - Gegevens: `C:\ProgramData\AudioShareUploader\` (`settings.json`, `tasks.json`, `uploads.json` met wachtrij en logboek, `werk\` voor omgezette kopieën).
-- Testen zonder service: `AudioShareUploader.exe run`.
-- Verwijderen: `AudioShareUploader.exe uninstall` (gegevens blijven staan).
+- Testen in een venster: `AudioShareUploader.exe run`.
+- Niet meer automatisch starten: Instellingen → vinkje uit. Afsluiten: Instellingen → Uploader afsluiten.
+- Als service (alleen als de pc niet ingelogd blijft): `AudioShareUploader.exe install` / `uninstall` als administrator; zie dan ook Netwerkmappen.
 - Een omzetting gebeurt één tegelijk; een lange WAV omzetten duurt even, andere taken wachten zo lang.
 
 ## Techniek

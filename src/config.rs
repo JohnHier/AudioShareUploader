@@ -76,6 +76,9 @@ pub struct Settings {
     pub programs: Vec<Program>,
     /// Network folders with their own logon.
     pub shares: Vec<Share>,
+    /// Desktop mode: start with Windows (for this user).
+    pub autostart: bool,
+    pub installed_once: bool,
 }
 
 impl Default for Settings {
@@ -91,6 +94,8 @@ impl Default for Settings {
             needs_relink: false,
             programs: Vec::new(),
             shares: Vec::new(),
+            autostart: true,
+            installed_once: false,
         }
     }
 }

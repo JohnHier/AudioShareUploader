@@ -1,12 +1,15 @@
 //! AudioShare Uploader: uploads programmes from a studio server to AudioShare,
-//! at fixed times or when a file is renewed. Runs as a Windows service with a
-//! web interface (default port 8470).
+//! at fixed times or when a file is renewed. Runs in the background under the
+//! signed-in user (double-click = install), or as a Windows service. Web
+//! interface on port 8470.
 
 #![allow(dead_code)]
+#![cfg_attr(windows, windows_subsystem = "windows")]
 
 mod audioshare;
 mod config;
 mod decode;
+mod desktop;
 mod engine;
 mod export;
 mod media;
@@ -17,12 +20,16 @@ mod web;
 
 const HELP: &str = "AudioShare Uploader
 
-Gebruik (als administrator):
-  AudioShareUploader install     installeren als Windows-service en starten
-  AudioShareUploader uninstall   service stoppen en verwijderen
-  AudioShareUploader run         draaien in dit venster (testen; stoppen met Ctrl+C)
+Normaal gebruik: dubbelklik op AudioShareUploader.exe. Hij draait dan op de
+achtergrond onder deze Windows-gebruiker, start voortaan mee met Windows en
+opent de webinterface (http://localhost:8470).
 
-Daarna: open http://localhost:8470 op deze pc om het beheeraccount aan te maken.
+Opdrachten:
+  AudioShareUploader run         draaien in dit venster (testen; stoppen met Ctrl+C)
+  AudioShareUploader install     als Windows-service installeren (als administrator; alleen
+                                 nodig als de pc niet ingelogd blijft)
+  AudioShareUploader uninstall   die service weer verwijderen (als administrator)
+
 Gegevens staan in C:\\ProgramData\\AudioShareUploader\\";
 
 fn run_foreground() -> Result<(), String> {
@@ -32,10 +39,56 @@ fn run_foreground() -> Result<(), String> {
     web::serve(app)
 }
 
+/// Started by autostart (or by a double-click): engine + web, no window.
+fn run_background() -> Result<(), String> {
+    let port = config::Settings::load().port;
+    if desktop::port_in_use(port) {
+        return Ok(()); // already running
+    }
+    let app = engine::App::start();
+    web::serve(app)
+}
+
+/// Double-click: install for this user and open the web interface.
+fn double_click() -> Result<(), String> {
+    let port = config::Settings::load().port;
+    let url = format!("http://localhost:{port}");
+    if desktop::service_installed() {
+        desktop::message(
+            "AudioShare Uploader",
+            "Op deze pc staat nog de service-versie van de AudioShare Uploader.\n\nVerwijder die eerst: open een opdrachtprompt als administrator, ga naar deze map en typ:\n\nAudioShareUploader.exe uninstall\n\nDubbelklik daarna opnieuw. Taken en koppeling blijven bewaard.",
+            true,
+        );
+        return Ok(());
+    }
+    if desktop::port_in_use(port) {
+        desktop::open_browser(&url);
+        return Ok(());
+    }
+    let mut s = config::Settings::load();
+    if s.autostart {
+        desktop::set_autostart(true)?;
+    }
+    if !s.installed_once {
+        s.installed_once = true;
+        s.save();
+    }
+    desktop::spawn_background()?;
+    std::thread::sleep(std::time::Duration::from_millis(1500));
+    desktop::open_browser(&url);
+    Ok(())
+}
+
 fn main() {
     let cmd = std::env::args().nth(1).unwrap_or_default();
+    if !matches!(cmd.as_str(), "" | "background" | "service") {
+        desktop::attach_console();
+    }
     let res = match cmd.as_str() {
         "run" => run_foreground(),
+        "background" => run_background(),
+        #[cfg(windows)]
+        "" => double_click(),
         #[cfg(windows)]
         "install" => service::install(),
         #[cfg(windows)]
@@ -44,16 +97,14 @@ fn main() {
         "service" => service::dispatch(),
         _ => {
             println!("{HELP}");
-            #[cfg(windows)]
-            if cmd.is_empty() {
-                println!("\nDruk op Enter om te sluiten.");
-                let _ = std::io::stdin().read_line(&mut String::new());
-            }
             Ok(())
         }
     };
     if let Err(e) = res {
         eprintln!("Fout: {e}");
+        if cmd.is_empty() {
+            desktop::message("AudioShare Uploader", &e, true);
+        }
         std::process::exit(1);
     }
 }
@@ -93,6 +144,7 @@ mod service {
     }
 
     fn service_main(_args: Vec<OsString>) {
+        crate::engine::AS_SERVICE.store(true, Ordering::Relaxed);
         let app = crate::engine::App::start();
         let a = app.clone();
         let handler = move |c| match c {

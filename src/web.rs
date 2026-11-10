@@ -410,6 +410,14 @@ impl Web {
                 st.save();
                 json_resp(200, &json!({ "ok": true }))
             }
+            (Method::Post, ["shutdown"]) => {
+                if crate::engine::AS_SERVICE.load(Ordering::Relaxed) {
+                    return err(400, "De service stop je via Windows (Services)");
+                }
+                self.app.log("systeem", Level::Info, format!("Afgesloten door {user}"));
+                self.app.stop.store(true, Ordering::Relaxed);
+                json_resp(200, &json!({ "ok": true }))
+            }
             (Method::Post, ["shares"]) => {
                 let unc = crate::shares::normalize_unc(&s("unc"));
                 let letter = crate::shares::normalize_letter(&s("letter"));
@@ -467,6 +475,14 @@ impl Web {
                 }
                 if let Some(b) = input.get("allow_remote").and_then(Value::as_bool) {
                     st.allow_remote = b;
+                }
+                if let Some(b) = input.get("autostart").and_then(Value::as_bool) {
+                    if !crate::engine::AS_SERVICE.load(Ordering::Relaxed) {
+                        if let Err(e) = crate::desktop::set_autostart(b) {
+                            return err(500, &e);
+                        }
+                    }
+                    st.autostart = b;
                 }
                 st.save();
                 json_resp(200, &json!({ "ok": true, "message": "Opgeslagen. Een andere poort werkt na het herstarten van de service." }))
@@ -589,7 +605,8 @@ impl Web {
             },
             "programs": st.programs.iter().map(|p| json!({ "id": p.id, "name": p.name })).collect::<Vec<_>>(),
             "tasks": tasks,
-            "settings": { "port": st.port, "allow_remote": st.allow_remote, "accounts": st.accounts.iter().map(|a| a.name.clone()).collect::<Vec<_>>() },
+            "settings": { "port": st.port, "allow_remote": st.allow_remote, "autostart": crate::desktop::autostart_enabled() || (cfg!(not(windows)) && st.autostart),
+                "service": crate::engine::AS_SERVICE.load(Ordering::Relaxed), "accounts": st.accounts.iter().map(|a| a.name.clone()).collect::<Vec<_>>() },
             "shares": st.shares.iter().map(|x| json!({ "letter": x.letter, "unc": x.unc, "user": x.user })).collect::<Vec<_>>(),
             "computer": computer_name(),
             "version": env!("CARGO_PKG_VERSION"),
