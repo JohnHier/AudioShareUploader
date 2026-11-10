@@ -22,7 +22,7 @@ Vanaf andere pc's in het netwerk: `http://<naam-van-de-server>:8470` (sta poort 
 | Instelling | Uitleg |
 |---|---|
 | Programma | Uit de lijst die AudioShare voor deze studio toestaat |
-| Bron | Een vast bestand, of een map (dan het nieuwste audiobestand: MP3, WAV, FLAC, OGG). Netwerkpaden (`\\nas\audio\...`) kunnen, mits de service er toegang toe heeft (zie hieronder) |
+| Bron | Een vast bestand, of een map (dan het nieuwste audiobestand: MP3, WAV, FLAC, OGG). Netwerkschijven (`Y:\...`) en netwerkpaden (`\\nas\audio\...`) werken zoals in Verkenner |
 | Moment | **Bewaken**: uploaden zodra het bestand nieuw of veranderd is. **Vaste tijd**: op gekozen dagen en tijdstip |
 | Wachttijd | Een bestand moet zo lang ongewijzigd zijn (standaard 60 s), zodat een half weggeschreven opname niet meegaat |
 | Uitzenddatum | Vandaag, morgen, eerstvolgende uitzenddag (vandaag telt mee), of uit de bestandsnaam (`2026-11-14`, `20261114`, `14-11-2026`) |
